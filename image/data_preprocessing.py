@@ -6,48 +6,58 @@ def EMA(indicator_list, period):
         EMA = (current_value - EMA) * 2 / (period + 1) + EMA
     return EMA
 
-BTC = pd.read_csv(r"image/raw_data/BTC.csv")
-
-BTC = BTC[0:20000]
-EMA_period = 14400
-
-BTC['exchange_balance_EMA'] = ''
-BTC['options_volume_put_call_ratio_EMA'] = ''
-BTC['realized_volatility_1_week_EMA'] = ''
-BTC['exchange_balance_normalized'] = ''
-BTC['options_volume_put_call_ratio_normalized'] = ''
-BTC['realized_volatility_1_week_normalized'] = ''
-BTC['1_hour_price_change'] = ''
-BTC['1_day_price_change'] = ''
-BTC['5_day_price_change'] = ''
-
-
-for index, row in BTC.iterrows():
-    if index < EMA_period:
-        pass
+def update_row(df, row, EMA_period):
+    print(row.name)
+    if row.name < EMA_period:
+        return row
     else:
-        previous_exchange_balance = list(BTC["exchange_balance"][index - EMA_period : index])
-        row.iloc[BTC.columns.get_loc('exchange_balance_EMA')] = EMA(previous_exchange_balance, EMA_period)
-        previous_options_volume_put_call_ratio = list(BTC["options_volume_put_call_ratio"][index - EMA_period : index])
-        row.iloc[BTC.columns.get_loc('options_volume_put_call_ratio_EMA')] = EMA(previous_options_volume_put_call_ratio, EMA_period)
-        previous_realized_volatility_1_week = list(BTC["realized_volatility_1_week"][index - EMA_period : index])
-        row.iloc[BTC.columns.get_loc('realized_volatility_1_week_EMA')] = EMA(previous_realized_volatility_1_week, EMA_period)
+        row['exchange_balance_EMA'] = EMA(list(df["exchange_balance"][row.name - EMA_period : row.name]), EMA_period)
+        row['options_volume_put_call_ratio_EMA'] = EMA(list(df["options_volume_put_call_ratio"][row.name - EMA_period : row.name]), EMA_period)
+        row['realized_volatility_1_week_EMA'] = EMA(list(df["realized_volatility_1_week"][row.name - EMA_period : row.name]), EMA_period)
 
-        row.iloc[BTC.columns.get_loc('exchange_balance_normalized')] = (row.iloc[BTC.columns.get_loc('exchange_balance')] - row.iloc[BTC.columns.get_loc('exchange_balance_EMA')])/row.iloc[BTC.columns.get_loc('exchange_balance_EMA')]
-        row.iloc[BTC.columns.get_loc('options_volume_put_call_ratio_normalized')] = (row.iloc[BTC.columns.get_loc('options_volume_put_call_ratio')] - row.iloc[BTC.columns.get_loc('options_volume_put_call_ratio_EMA')])/row.iloc[BTC.columns.get_loc('options_volume_put_call_ratio_EMA')]
-        row.iloc[BTC.columns.get_loc('realized_volatility_1_week_normalized')] = (row.iloc[BTC.columns.get_loc('realized_volatility_1_week')] - row.iloc[BTC.columns.get_loc('realized_volatility_1_week_EMA')])/row.iloc[BTC.columns.get_loc('realized_volatility_1_week_EMA')]
+        row['exchange_balance_normalized'] = (row['exchange_balance'] - row['exchange_balance_EMA']) / row['exchange_balance_EMA']
+        row['options_volume_put_call_ratio_normalized'] = (row['options_volume_put_call_ratio'] - row['options_volume_put_call_ratio_EMA']) / row['options_volume_put_call_ratio_EMA']
+        row['realized_volatility_1_week_normalized'] = (row['realized_volatility_1_week'] - row['realized_volatility_1_week_EMA']) / row['realized_volatility_1_week_EMA']
 
         try:
-            row.iloc[BTC.columns.get_loc("1_hour_price_change")] = (row.iloc[BTC.columns.get_loc("price_usd_close")].shift(-12) - row.iloc[BTC.columns.get_loc("price_usd_close")]) / row.iloc[BTC.columns.get_loc("price_usd_close")]
-            row.iloc[BTC.columns.get_loc("1_day_price_change")] = (row.iloc[BTC.columns.get_loc("price_usd_close")].shift(-288) - row.iloc[BTC.columns.get_loc("price_usd_close")]) / row.iloc[BTC.columns.get_loc("price_usd_close")]
-            row.iloc[BTC.columns.get_loc("5_day_price_change")] = (row.iloc[BTC.columns.get_loc("price_usd_close")].shift(-1440) - row.iloc[BTC.columns.get_loc("price_usd_close")]) / row.iloc[BTC.columns.get_loc("price_usd_close")]
+            row['1_hour_price_change'] = (df['price_usd_close'].iloc[row.name + 12] - row['price_usd_close']) / row['price_usd_close']
+            row['1_day_price_change'] = (df['price_usd_close'].iloc[row.name + 288] - row['price_usd_close']) / row['price_usd_close']
+            row['5_day_price_change'] = (df['price_usd_close'].iloc[row.name + 1440] - row['price_usd_close']) / row['price_usd_close']
+
         except:
-            pass
-        print(len(BTC)-index)
+            row['1_hour_price_change'] = 0
+            row['1_day_price_change'] = 0
+            row['5_day_price_change'] = 0
 
+        return row
+    
+BTC = pd.read_csv(r"image/raw_data/BTC.csv")
+print(len(BTC))
 BTC = BTC.dropna()
-
-BTC.to_csv('image/cleaned_data/BTC_EMA.csv', index=False)
+BTC = BTC.reset_index(drop=True)
+print(len(BTC))
 
 print(BTC)
-    
+EMA_period = 14400
+
+BTC['exchange_balance_EMA'] = 0
+BTC['options_volume_put_call_ratio_EMA'] = 0
+BTC['realized_volatility_1_week_EMA'] = 0
+BTC['exchange_balance_normalized'] = 0
+BTC['options_volume_put_call_ratio_normalized'] = 0
+BTC['realized_volatility_1_week_normalized'] = 0
+BTC['1_hour_price_change'] = 0
+BTC['1_day_price_change'] = 0
+BTC['5_day_price_change'] = 0
+
+# Apply the update_row function to each row of the DataFrame
+BTC = BTC.apply(lambda row: update_row(BTC, row, EMA_period), axis=1)
+
+# Remove all the rows with 0
+BTC = BTC.loc[(BTC != 0).all(axis=1)]
+
+# Save the cleaned DataFrame to a CSV file
+BTC.to_csv('image/cleaned_data/BTC_EMA.csv', index=False)
+
+# Print the updated DataFrame
+print(BTC)
