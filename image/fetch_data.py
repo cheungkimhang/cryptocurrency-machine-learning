@@ -3,9 +3,9 @@ import pandas as pd
 
 get_data = get_data()
 
-symbol = "BTC"
+symbol = "BNB"
 interval_glassnode = "10m"
-exchange = "bybit"
+exchange = "binance"
 
 hash_rate_mean = get_data.get_data_from_glassnode(symbol, "https://api.glassnode.com/v1/metrics/distribution/balance_exchanges_pit", interval_glassnode, exchange = exchange)
 
